@@ -10,6 +10,4 @@ RUN mkdir -p /websrv\
     && apt-get update\
     && apt-get install -y php7.3-fpm php-rrd
 
-COPY config/* /etc/nginx/
-
 CMD php-fpm7.3 -D && nginx -g 'daemon off;'
