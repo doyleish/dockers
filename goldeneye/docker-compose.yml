@@ -1,0 +1,88 @@
+version: "3.7"
+
+volumes:
+  prometheus-data:
+    name: prometheus-data
+  grafana-data:
+    name: grafana-data
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+services:
+  web:
+    image: goldeneye/web
+    container_name: web
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /websrv:/websrv
+      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
+      - /mnt/store0:/mnt/store0:ro
+      - ./config/web:/etc/nginx:ro
+  
+  samba:
+    image: goldeneye/samba
+    container_name: samba
+    ports:
+      - 139:139
+      - 445:445
+    volumes:
+      - ./config/samba/smb.conf:/etc/samba/smb.conf:ro
+      - /mnt/store0:/mnt/store0:ro
+
+  unbound:
+    image: klutchell/unbound
+    container_name: unbound
+    ports:
+      - 53:5053/udp
+    volumes:
+      - ./config/unbound:/etc/unbound:ro
+
+  minecraft:
+    image: openjdk:18-slim
+    container_name: minecraft
+    ports:
+      - 25565:25565
+    volumes:
+      - ./data/minecraft:/minecraft:rw
+    working_dir: /minecraft
+    command: "java -Xmx8192M -Xms8192M -Dfml.readTimeout=90 -Dfml.ignorePatchDiscrepancies=true -jar server.jar nogui"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+    user: '104'
+    depends_on:
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    extra_hosts:
+      goldeneye: 172.22.0.1
+    ports:
+      - 9090:9090
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - cadvisor
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
