@@ -17,7 +17,6 @@ services:
     image: goldeneye/web
     container_name: web
     ports:
-      - 80:80
       - 443:443
     volumes:
       - /websrv:/websrv
@@ -25,7 +24,26 @@ services:
       - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
       - /mnt/store0:/mnt/store0:ro
       - ./config/web:/etc/nginx:ro
-  
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - JELLYFIN_PublishedServerUrl=goldeneye:8096 #optional
+    volumes:
+      - ./data/jellyfin:/config
+      - /mnt/store0/shows:/data/tv:ro
+      - /mnt/store0/movies:/data/movies:ro
+      - /mnt/store0/other:/data/other:ro
+    ports:
+      - 8096:8096
+      - 8920:8920 #optional
+      - 7359:7359/udp #optional
+      - 1900:1900/udp #optional
+
   samba:
     image: goldeneye/samba
     container_name: samba
@@ -34,7 +52,23 @@ services:
       - 445:445
     volumes:
       - ./config/samba/smb.conf:/etc/samba/smb.conf:ro
-      - /mnt/store0:/mnt/store0:ro
+      - /mnt/store0:/mnt/store0:rw
+  
+  unifi:
+    image: jacobalberty/unifi
+    container_name: unifi
+    ports:
+      - 3478:3478/udp
+      - 6789:6789/tcp
+      - 8080:8080/tcp
+      - 8443:8443/tcp
+      - 8843:8843/tcp
+      - 8880:8880/tcp
+      - 10001:10001/udp
+    volumes:
+      - ./data/unifi:/unifi
+    environment:
+      - TZ=America/Los_Angeles
 
   unbound:
     image: klutchell/unbound

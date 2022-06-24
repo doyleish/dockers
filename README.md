@@ -1,3 +1,3 @@
 # Dockers
 
-dockerfiles and resources for the my services and tools
+Container images, config, and docker-compose for my servers
