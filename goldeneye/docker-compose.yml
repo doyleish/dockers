@@ -26,7 +26,7 @@ services:
       - ./config/web:/etc/nginx:ro
 
   jellyfin:
-    image: lscr.io/linuxserver/jellyfin
+    image: lscr.io/linuxserver/jellyfin:10.8.4
     container_name: jellyfin
     environment:
       - PUID=1000
@@ -52,8 +52,8 @@ services:
       - 445:445
     volumes:
       - ./config/samba/smb.conf:/etc/samba/smb.conf:ro
-      - /mnt/store0:/mnt/store0:rw
-  
+      - /mnt/store1/drive:/mnt/store1/drive:rw
+
   unifi:
     image: jacobalberty/unifi
     container_name: unifi
@@ -120,3 +120,34 @@ services:
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+
+  boinc:
+    image: boinc/client:nvidia
+    container_name: boinc
+    network_mode: host
+    pid: host
+    volumes:
+      - ./data/boinc:/var/lib/boinc
+    environment:
+      - BOINC_GUI_RPC_PASSWORD=admin
+      - BOINC_CMD_LINE_OPTIONS=--allow_remote_gui_rpc
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  dcgm-exporter:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:2.4.5-2.6.7-ubuntu20.04
+    container_name: dcgm-exporter
+    ports:
+      - 9400:9400
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
