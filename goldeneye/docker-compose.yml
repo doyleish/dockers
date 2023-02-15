@@ -151,3 +151,13 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+  octoklip:
+    image: doyleish/octoklip
+    ports:
+      - 8888:80
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    volumes:
+      - ./data/octoprint:/octoprint
+      - ./config/klipper/printer.cfg:/home/klipper/.config/printer.cfg
