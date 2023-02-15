@@ -1,4 +1,4 @@
-FROM octoprint/octoprint:latest
+FROM octoprint/octoprint:1.8.6
 
 RUN apt-get -y install sudo
 ### Klipper setup ###
@@ -9,12 +9,12 @@ RUN useradd -ms /bin/bash klippy && adduser klippy dialout
 # Clone klipper
 USER klippy
 WORKDIR /home/klippy
-RUN git clone --depth=1 https://github.com/Klipper3d/klipper
+RUN git clone --depth=1 --branch=v0.11.0 https://github.com/Klipper3d/klipper
 
 USER root
 
 # Sudoers and ownershipt
-RUN echo "klipper ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN echo "klippy ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RUN chown klippy:klippy -R klipper
 
 # Requirements

@@ -153,11 +153,12 @@ services:
               capabilities: [gpu]
 
   octoklip:
-    image: doyleish/octoklip
+    image: goldeneye/octoklip:o1.8.6k0.11.0
+    container_name: octoklip
     ports:
       - 8888:80
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
     volumes:
       - ./data/octoprint:/octoprint
-      - ./config/klipper/printer.cfg:/home/klipper/.config/printer.cfg
+      - ./config/klipper/printer.cfg:/home/klippy/.config/printer.cfg
