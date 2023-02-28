@@ -18,4 +18,4 @@ RUN useradd ryan\
     && echo -e "$PWD\n$PWD" | smbpasswd -a ryan\
     && > passwordfile 
 
-CMD smbd -F -S --no-process-group
+CMD smbd -F --no-process-group

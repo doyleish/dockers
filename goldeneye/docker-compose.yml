@@ -3,8 +3,6 @@ version: "3.7"
 volumes:
   prometheus-data:
     name: prometheus-data
-  grafana-data:
-    name: grafana-data
 
 networks:
   default:
@@ -13,17 +11,14 @@ networks:
         - subnet: 172.22.0.0/16
 
 services:
-  web:
-    image: goldeneye/web
-    container_name: web
-    ports:
-      - 443:443
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     volumes:
-      - /websrv:/websrv
-      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
-      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
-      - /mnt/store0:/mnt/store0:ro
-      - ./config/web:/etc/nginx:ro
+     - ./config/nginx:/etc/nginx:ro
+     - ./data/letsencrypt:/etc/letsencrypt:ro
+    ports:
+     - 443:443
 
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:10.8.4
@@ -94,7 +89,7 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - grafana-data:/var/lib/grafana
+      - ./data/grafana:/var/lib/grafana
     user: '104'
     depends_on:
       - prometheus
