@@ -14,9 +14,13 @@ services:
   nginx:
     image: nginx:latest
     container_name: nginx
+    depends_on:
+      - jellyfin
+      - grafana
+      - thelounge
     volumes:
      - ./config/nginx:/etc/nginx:ro
-     - ./data/letsencrypt:/etc/letsencrypt:ro
+     - ./data/letsencrypt/etc:/etc/letsencrypt:ro
     ports:
      - 443:443
 
@@ -73,15 +77,15 @@ services:
     volumes:
       - ./config/unbound:/etc/unbound:ro
 
-  minecraft:
-    image: openjdk:18-slim
-    container_name: minecraft
-    ports:
-      - 25565:25565
-    volumes:
-      - ./data/minecraft:/minecraft:rw
-    working_dir: /minecraft
-    command: "java -Xmx8192M -Xms8192M -Dfml.readTimeout=90 -Dfml.ignorePatchDiscrepancies=true -jar server.jar nogui"
+  # minecraft:
+  #   image: openjdk:18-slim
+  #   container_name: minecraft
+  #   ports:
+  #     - 25565:25565
+  #   volumes:
+  #     - ./data/minecraft:/minecraft:rw
+  #   working_dir: /minecraft
+  #   command: "java -Xmx8192M -Xms8192M -Dfml.readTimeout=90 -Dfml.ignorePatchDiscrepancies=true -jar server.jar nogui"
 
   grafana:
     image: grafana/grafana:latest
@@ -117,7 +121,8 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
 
   boinc:
-    image: boinc/client:nvidia
+    image: boinc/client:latest
+    # image: boinc/client:nvidia
     container_name: boinc
     network_mode: host
     pid: host
@@ -126,26 +131,26 @@ services:
     environment:
       - BOINC_GUI_RPC_PASSWORD=admin
       - BOINC_CMD_LINE_OPTIONS=--allow_remote_gui_rpc
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
 
-  dcgm-exporter:
-    image: nvcr.io/nvidia/k8s/dcgm-exporter:2.4.5-2.6.7-ubuntu20.04
-    container_name: dcgm-exporter
-    ports:
-      - 9400:9400
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+  # dcgm-exporter:
+  #   image: nvcr.io/nvidia/k8s/dcgm-exporter:2.4.5-2.6.7-ubuntu20.04
+  #   container_name: dcgm-exporter
+  #   ports:
+  #     - 9400:9400
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
 
   octoklip:
     image: goldeneye/octoklip:o1.8.6k0.11.0
@@ -154,6 +159,79 @@ services:
       - 8888:80
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
+      - /dev/video0:/dev/video0
+    environment:
+      - ENABLE_MJPG_STREAMER=true
     volumes:
       - ./data/octoprint:/octoprint
       - ./config/klipper/printer.cfg:/home/klippy/.config/printer.cfg
+
+  radarr:
+    image: linuxserver/radarr:4.3.2
+    container_name: radarr
+    depends_on:
+      - qbittorrent
+    environment:
+      - UMASK_SET=022 # control permissions of files and directories created by Radarr
+      - TZ=America/Los_Angeles # Specify a timezone to use EG Europe/London, this is required for Radarr
+      - PUID=1000 # for UserID
+      - PGID=1000 # for GroupID
+    volumes:
+      - /mnt/store0:/store0 # Location of Movie library on disk (See note in Application setup)
+      - ./data/radarr:/config # Database and Radarr configs
+    ports:
+      - 7878:7878/tcp # The port for the Radarr webinterface
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: always
+    network_mode: container:openvpn-client
+    depends_on:
+      - openvpn-client
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - WEBUI_PORT=5908
+    volumes:
+      - ./data/qbittorrent:/config
+      - /mnt/store0/downloads:/store0/downloads
+    healthcheck:
+      test: ip route | grep tun | grep '0.0.0.0'
+      interval: 10s
+      retries: 3
+      start_period: 5s
+      timeout: 15s
+
+  openvpn-client:
+    image: dperson/openvpn-client:latest
+    container_name: openvpn-client
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    environment:
+      - VPN_FILES="config.ovpn"
+    volumes:
+      - ./config/openvpn-client:/vpn
+    ports:
+      - 5908:5908
+      - 6881:6881
+      - 6881:6881/udp
+
+  autoheal:
+    image: willfarrell/autoheal
+    container_name: autoheal
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+
+  thelounge:
+    image: thelounge/thelounge:latest
+    container_name: thelounge
+    volumes:
+      - ./data/thelounge:/var/opt/thelounge
