@@ -11,6 +11,50 @@ networks:
         - subnet: 172.22.0.0/16
 
 services:
+  samba:
+    image: goldeneye/samba
+    container_name: samba
+    ports:
+      - 139:139
+      - 445:445
+    volumes:
+      - ./config/samba/smb.conf:/etc/samba/smb.conf:ro
+      - /mnt/store1/drive:/mnt/store1/drive:rw
+
+  minio:
+    image: minio/minio
+    container_name: minio 
+    ports:
+      - 9001:9001
+    env_file:
+      - .env.minio
+    command: 'server /data --console-address ":9001"'
+    volumes:
+      - ./data/minio:/data
+
+  unifi:
+    image: jacobalberty/unifi
+    container_name: unifi
+    ports:
+      - 3478:3478/udp
+      - 6789:6789/tcp
+      - 8080:8080/tcp
+      - 8443:8443/tcp
+      - 8843:8843/tcp
+      - 8880:8880/tcp
+      - 10001:10001/udp
+    volumes:
+      - ./data/unifi:/unifi
+    environment:
+      - TZ=America/Los_Angeles
+
+  unbound:
+    image: klutchell/unbound
+    container_name: unbound
+    ports:
+      - 53:5053/udp
+    volumes:
+      - ./config/unbound:/etc/unbound:ro
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -36,51 +80,6 @@ services:
       - ./data/jellyfin:/config
       - /mnt/store0/shows:/data/tv:ro
       - /mnt/store0/movies:/data/movies:ro
-      - /mnt/store0/other:/data/other:ro
-
-  samba:
-    image: goldeneye/samba
-    container_name: samba
-    ports:
-      - 139:139
-      - 445:445
-    volumes:
-      - ./config/samba/smb.conf:/etc/samba/smb.conf:ro
-      - /mnt/store1/drive:/mnt/store1/drive:rw
-
-  unifi:
-    image: jacobalberty/unifi
-    container_name: unifi
-    ports:
-      - 3478:3478/udp
-      - 6789:6789/tcp
-      - 8080:8080/tcp
-      - 8443:8443/tcp
-      - 8843:8843/tcp
-      - 8880:8880/tcp
-      - 10001:10001/udp
-    volumes:
-      - ./data/unifi:/unifi
-    environment:
-      - TZ=America/Los_Angeles
-
-  unbound:
-    image: klutchell/unbound
-    container_name: unbound
-    ports:
-      - 53:5053/udp
-    volumes:
-      - ./config/unbound:/etc/unbound:ro
-
-  # minecraft:
-  #   image: openjdk:18-slim
-  #   container_name: minecraft
-  #   ports:
-  #     - 25565:25565
-  #   volumes:
-  #     - ./data/minecraft:/minecraft:rw
-  #   working_dir: /minecraft
-  #   command: "java -Xmx8192M -Xms8192M -Dfml.readTimeout=90 -Dfml.ignorePatchDiscrepancies=true -jar server.jar nogui"
 
   grafana:
     image: grafana/grafana:latest
@@ -112,25 +111,35 @@ services:
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+  
+  # minecraft:
+  #   image: openjdk:18-slim
+  #   container_name: minecraft
+  #   ports:
+  #     - 25565:25565
+  #   volumes:
+  #     - ./data/minecraft:/minecraft:rw
+  #   working_dir: /minecraft
+  #   command: "java -Xmx8192M -Xms8192M -Dfml.readTimeout=90 -Dfml.ignorePatchDiscrepancies=true -jar server.jar nogui"
 
-  boinc:
-    image: boinc/client:latest
-    # image: boinc/client:nvidia
-    container_name: boinc
-    network_mode: host
-    pid: host
-    volumes:
-      - ./data/boinc:/var/lib/boinc
-    environment:
-      - BOINC_GUI_RPC_PASSWORD=admin
-      - BOINC_CMD_LINE_OPTIONS=--allow_remote_gui_rpc
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+  # boinc:
+  #   image: boinc/client:latest
+  #   # image: boinc/client:nvidia
+  #   container_name: boinc
+  #   network_mode: host
+  #   pid: host
+  #   volumes:
+  #     - ./data/boinc:/var/lib/boinc
+  #   environment:
+  #     - BOINC_GUI_RPC_PASSWORD=admin
+  #     - BOINC_CMD_LINE_OPTIONS=--allow_remote_gui_rpc
+  #   # deploy:
+  #   #   resources:
+  #   #     reservations:
+  #   #       devices:
+  #   #         - driver: nvidia
+  #   #           count: 1
+  #   #           capabilities: [gpu]
 
   # dcgm-exporter:
   #   image: nvcr.io/nvidia/k8s/dcgm-exporter:2.4.5-2.6.7-ubuntu20.04
@@ -145,25 +154,25 @@ services:
   #             count: 1
   #             capabilities: [gpu]
 
-  octoklip:
-    image: goldeneye/octoklip:o1.8.6k0.11.0
-    container_name: octoklip
-    ports:
-      - 8888:80
-    devices:
-      - /dev/ttyACM0:/dev/ttyACM0
-      - /dev/video0:/dev/video0
-    environment:
-      - ENABLE_MJPG_STREAMER=true
-    volumes:
-      - ./data/octoprint:/octoprint
-      - ./config/klipper/printer.cfg:/home/klippy/.config/printer.cfg
+  # octoklip:
+  #   image: goldeneye/octoklip:o1.8.6k0.11.0
+  #   container_name: octoklip
+  #   devices:
+  #     - /dev/ttyACM0:/dev/ttyACM0
+  #     - /dev/video0:/dev/video0
+  #   environment:
+  #     - ENABLE_MJPG_STREAMER=true
+  #   volumes:
+  #     - ./data/octoprint:/octoprint
+  #     - ./config/klipper/printer.cfg:/home/klippy/.config/printer.cfg
 
   radarr:
     image: linuxserver/radarr:4.3.2
     container_name: radarr
     depends_on:
       - qbittorrent
+      - jackett
+        #- openvpn-client
     environment:
       - UMASK_SET=022 # control permissions of files and directories created by Radarr
       - TZ=America/Los_Angeles # Specify a timezone to use EG Europe/London, this is required for Radarr
@@ -172,16 +181,28 @@ services:
     volumes:
       - /mnt/store0:/store0 # Location of Movie library on disk (See note in Application setup)
       - ./data/radarr:/config # Database and Radarr configs
-    ports:
-      - 7878:7878/tcp # The port for the Radarr webinterface
+  
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - RUN_OPTS= #optional
+    volumes:
+      - ./data/jackett:/config
+      - ./data/jackett-dl:/downloads
+    # ports:
+    #   - 9117:9117
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: always
-    network_mode: container:openvpn-client
-    depends_on:
-      - openvpn-client
+      # network_mode: container:openvpn-client
+      # depends_on:
+      #   - openvpn-client
     environment:
       - PUID=1000
       - PGID=1000
@@ -190,29 +211,28 @@ services:
     volumes:
       - ./data/qbittorrent:/config
       - /mnt/store0/downloads:/store0/downloads
-    healthcheck:
-      test: ip route | grep tun | grep '0.0.0.0'
-      interval: 10s
-      retries: 3
-      start_period: 5s
-      timeout: 15s
+    # healthcheck:
+    #   test: ip route | grep tun | grep '0.0.0.0'
+    #   interval: 10s
+    #   retries: 3
+    #   start_period: 5s
+    #   timeout: 15s
 
-  openvpn-client:
-    image: dperson/openvpn-client:latest
-    container_name: openvpn-client
-    restart: always
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun
-    environment:
-      - VPN_FILES="config.ovpn"
-    volumes:
-      - ./config/openvpn-client:/vpn
-    ports:
-      - 5908:5908
-      - 6881:6881
-      - 6881:6881/udp
+  # openvpn-client:
+  #   image: dperson/openvpn-client:latest
+  #   container_name: openvpn-client
+  #   restart: always
+  #   cap_add:
+  #     - NET_ADMIN
+  #   #devices:
+  #   #  - /dev/net/tun
+  #   environment:
+  #     - VPN_FILES="config.ovpn"
+  #   volumes:
+  #     - ./config/openvpn-client:/vpn
+  #   ports:
+  #     - 6881:6881
+  #     - 6881:6881/udp
 
   autoheal:
     image: willfarrell/autoheal
@@ -228,3 +248,44 @@ services:
     container_name: thelounge
     volumes:
       - ./data/thelounge:/var/opt/thelounge
+  
+  freshrss:
+    image: freshrss/freshrss:edge
+    container_name: freshrss
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: 10m
+    volumes:
+      - ./data/freshrss:/var/www/FreshRSS/data
+    environment:
+      TZ: America/Denver
+      # Cron job to refresh feeds at specified minutes
+      CRON_MIN: '0,15,30,45'
+      # 'development' for additional logs; default is 'production'
+      #FRESHRSS_ENV: development
+      # Optional advanced parameter controlling the internal Apache listening port
+      LISTEN: 0.0.0.0:80
+      # Optional parameter, set to 1 to enable OpenID Connect (only available in our Debian image)
+      # Requires more environment variables. See https://freshrss.github.io/FreshRSS/en/admins/16_OpenID-Connect.html
+      OIDC_ENABLED: 0
+      # Optional auto-install parameters (the Web interface install is recommended instead):
+      # ⚠️ Parameters below are only used at the very first run (so far).
+      # So if changes are made (or in .env file), first delete the service and volumes.
+      # ℹ️ All the --db-* parameters can be omitted if using built-in SQLite database.
+      #FRESHRSS_INSTALL: |-
+      #  --api_enabled
+      #  --base_url ${BASE_URL}
+      #  --db-base ${DB_BASE}
+      #  --db-host ${DB_HOST}
+      #  --db-password ${DB_PASSWORD}
+      #  --db-type pgsql
+      #  --db-user ${DB_USER}
+      #  --default_user admin
+      #  --language en
+      #FRESHRSS_USER: |-
+      #  --api_password ${ADMIN_API_PASSWORD}
+      #  --email ${ADMIN_EMAIL}
+      #  --language en
+      #  --password ${ADMIN_PASSWORD}
+      #  --user admin  
