@@ -11,6 +11,7 @@ networks:
         - subnet: 172.22.0.0/16
 
 services:
+  # Data storage
   samba:
     image: goldeneye/samba
     container_name: samba
@@ -32,6 +33,7 @@ services:
     volumes:
       - ./data/minio:/data
 
+  # Networking
   unifi:
     image: jacobalberty/unifi
     container_name: unifi
@@ -55,32 +57,22 @@ services:
       - 53:5053/udp
     volumes:
       - ./config/unbound:/etc/unbound:ro
+  
   nginx:
     image: nginx:latest
     container_name: nginx
     depends_on:
       - jellyfin
       - grafana
-      - thelounge
+      - qbittorrent
+      - radarr
     volumes:
      - ./config/nginx:/etc/nginx:ro
      - ./data/letsencrypt/etc:/etc/letsencrypt:ro
     ports:
      - 443:443
-
-  jellyfin:
-    image: lscr.io/linuxserver/jellyfin:10.8.4
-    container_name: jellyfin
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Los_Angeles
-      - JELLYFIN_PublishedServerUrl=goldeneye:8096 #optional
-    volumes:
-      - ./data/jellyfin:/config
-      - /mnt/store0/shows:/data/tv:ro
-      - /mnt/store0/movies:/data/movies:ro
-
+  
+  # Metrics
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -111,6 +103,21 @@ services:
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+  
+  # Services
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:10.8.4
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - JELLYFIN_PublishedServerUrl=goldeneye:8096 #optional
+    volumes:
+      - ./data/jellyfin:/config
+      - /mnt/store0/shows:/data/tv:ro
+      - /mnt/store0/movies:/data/movies:ro
+
   
   # minecraft:
   #   image: openjdk:18-slim
@@ -234,20 +241,14 @@ services:
   #     - 6881:6881
   #     - 6881:6881/udp
 
-  autoheal:
-    image: willfarrell/autoheal
-    container_name: autoheal
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - AUTOHEAL_CONTAINER_LABEL=all
-
-  thelounge:
-    image: thelounge/thelounge:latest
-    container_name: thelounge
-    volumes:
-      - ./data/thelounge:/var/opt/thelounge
+  # autoheal:
+  #   image: willfarrell/autoheal
+  #   container_name: autoheal
+  #   restart: always
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   environment:
+  #     - AUTOHEAL_CONTAINER_LABEL=all
   
   freshrss:
     image: freshrss/freshrss:edge
@@ -260,32 +261,6 @@ services:
       - ./data/freshrss:/var/www/FreshRSS/data
     environment:
       TZ: America/Denver
-      # Cron job to refresh feeds at specified minutes
       CRON_MIN: '0,15,30,45'
-      # 'development' for additional logs; default is 'production'
-      #FRESHRSS_ENV: development
-      # Optional advanced parameter controlling the internal Apache listening port
       LISTEN: 0.0.0.0:80
-      # Optional parameter, set to 1 to enable OpenID Connect (only available in our Debian image)
-      # Requires more environment variables. See https://freshrss.github.io/FreshRSS/en/admins/16_OpenID-Connect.html
       OIDC_ENABLED: 0
-      # Optional auto-install parameters (the Web interface install is recommended instead):
-      # ⚠️ Parameters below are only used at the very first run (so far).
-      # So if changes are made (or in .env file), first delete the service and volumes.
-      # ℹ️ All the --db-* parameters can be omitted if using built-in SQLite database.
-      #FRESHRSS_INSTALL: |-
-      #  --api_enabled
-      #  --base_url ${BASE_URL}
-      #  --db-base ${DB_BASE}
-      #  --db-host ${DB_HOST}
-      #  --db-password ${DB_PASSWORD}
-      #  --db-type pgsql
-      #  --db-user ${DB_USER}
-      #  --default_user admin
-      #  --language en
-      #FRESHRSS_USER: |-
-      #  --api_password ${ADMIN_API_PASSWORD}
-      #  --email ${ADMIN_EMAIL}
-      #  --language en
-      #  --password ${ADMIN_PASSWORD}
-      #  --user admin  
